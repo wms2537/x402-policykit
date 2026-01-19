@@ -1,33 +1,43 @@
 {
-	"name": "x402-policykit",
-	"version": "0.1.0",
-	"private": true,
-	"scripts": {
-		"dev": "next dev --turbopack",
-		"build": "next build",
-		"start": "next start",
-		"lint": "next lint",
-		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-		"upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
-		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-		"cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
-	},
-	"dependencies": {
-		"@opennextjs/cloudflare": "^1.14.4",
-		"next": "15.5.9",
-		"react": "19.1.4",
-		"react-dom": "19.1.4"
-	},
-	"devDependencies": {
-		"@eslint/eslintrc": "^3",
-		"@tailwindcss/postcss": "^4",
-		"@types/node": "^20.19.30",
-		"@types/react": "^19",
-		"@types/react-dom": "^19",
-		"eslint": "^9",
-		"eslint-config-next": "15.4.6",
-		"tailwindcss": "^4",
-		"typescript": "^5",
-		"wrangler": "^4.59.2"
-	}
+  "name": "x402-policykit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable toolkit for x402 paid API endpoints with policy-based spending control",
+  "scripts": {
+    "dev": "pnpm --filter @x402/dashboard-web dev",
+    "dev:worker": "pnpm --filter @x402/paywall-worker dev",
+    "dev:all": "concurrently \"pnpm dev:worker\" \"pnpm dev\"",
+    "build": "pnpm -r build",
+    "build:packages": "pnpm --filter './packages/*' build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "deploy:worker": "pnpm --filter @x402/paywall-worker deploy",
+    "deploy:dashboard": "pnpm --filter @x402/dashboard-web deploy",
+    "db:init": "pnpm --filter @x402/paywall-worker db:init",
+    "db:init:remote": "pnpm --filter @x402/paywall-worker db:init:remote"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "keywords": [
+    "x402",
+    "http-402",
+    "payment",
+    "paywall",
+    "cloudflare",
+    "workers",
+    "policy",
+    "spending"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/x402-policykit"
+  }
 }

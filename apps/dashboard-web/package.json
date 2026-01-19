@@ -1,0 +1,34 @@
+{
+  "name": "@x402/dashboard-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "x402 PolicyKit Dashboard - Spend tracking, policy management, and demo",
+  "scripts": {
+    "dev": "next dev --turbopack -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.14.4",
+    "@x402/client": "workspace:*",
+    "@x402/policy-engine": "workspace:*",
+    "next": "15.5.9",
+    "react": "19.1.4",
+    "react-dom": "19.1.4"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.19.30",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "wrangler": "^4.59.2"
+  }
+}
