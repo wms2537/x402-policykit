@@ -171,6 +171,9 @@ export async function x402Fetch(
         ...init,
         headers: {
           ...init.headers,
+          // Official x402 protocol header
+          'PAYMENT-SIGNATURE': paymentHeader,
+          // Legacy header for backwards compatibility
           'X-PAYMENT': paymentHeader,
         },
       });

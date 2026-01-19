@@ -17,8 +17,20 @@ id = "local" # Will be replaced with actual ID after creation
 # Environment variables (set via wrangler secret)
 [vars]
 SELLER_ADDRESS = "0x0000000000000000000000000000000000000000"
+# Default: USDC on Base Sepolia (for Coinbase x402 facilitator)
 DEFAULT_TOKEN = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" # USDC on Base Sepolia
-DEFAULT_CHAIN_ID = "84532" # Base Sepolia
+DEFAULT_CHAIN_ID = "84532" # Base Sepolia (eip155:84532)
+
+# Supported chains (CAIP-2 identifiers):
+# - Base Sepolia: eip155:84532 (testnet, Coinbase facilitator supported)
+# - Base Mainnet: eip155:8453
+# - Cronos Mainnet: eip155:25
+# - Cronos Testnet: eip155:338
+# - Ethereum Mainnet: eip155:1
+
+# For Cronos deployment, use:
+# DEFAULT_TOKEN = "0xc21223249CA28397B4B6541dfFaEcC539BfF0c59" # USDC on Cronos
+# DEFAULT_CHAIN_ID = "25" # Cronos Mainnet
 
 # Local development settings
 [dev]

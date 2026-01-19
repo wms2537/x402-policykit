@@ -81,22 +81,110 @@ export function tokenToUsd(amount: string, decimals: number = 6): number {
 }
 
 /**
- * Create 402 Payment Required response
+ * Convert chain ID to CAIP-2 network identifier
+ * https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-2.md
+ */
+export function chainIdToCAIP2(chainId: number): string {
+  return `eip155:${chainId}`;
+}
+
+/**
+ * Parse CAIP-2 network identifier to chain ID
+ */
+export function caip2ToChainId(network: string): number {
+  const match = network.match(/^eip155:(\d+)$/);
+  if (!match) throw new Error(`Invalid CAIP-2 identifier: ${network}`);
+  return parseInt(match[1], 10);
+}
+
+/**
+ * Create x402 PaymentRequired object (official protocol format)
+ */
+export function createPaymentRequired(
+  pricing: EndpointPricing,
+  config: PaywallConfig,
+  nonce: string,
+  expiry: number,
+  resource: string
+): PaymentRequired {
+  return {
+    scheme: pricing.schemes?.[0] ?? 'exact',
+    network: chainIdToCAIP2(pricing.chainId),
+    maxAmountRequired: pricing.priceToken,
+    resource,
+    description: pricing.description ?? `Payment of $${pricing.priceUsd.toFixed(4)} USD`,
+    mimeType: 'application/json',
+    payTo: config.sellerAddress,
+    maxTimeoutSeconds: config.expiryDuration ?? 300,
+    asset: pricing.token,
+    extra: {
+      priceUsd: pricing.priceUsd,
+      nonce,
+      expiry,
+    },
+  };
+}
+
+/**
+ * x402 PaymentRequired object structure (official protocol)
+ */
+export interface PaymentRequired {
+  scheme: string;
+  network: string;
+  maxAmountRequired: string;
+  resource: string;
+  description: string;
+  mimeType: string;
+  payTo: string;
+  maxTimeoutSeconds: number;
+  asset: string;
+  extra?: {
+    priceUsd?: number;
+    nonce?: string;
+    expiry?: number;
+  };
+}
+
+/**
+ * Encode PaymentRequired to base64 for PAYMENT-REQUIRED header
+ */
+export function encodePaymentRequired(pr: PaymentRequired): string {
+  return btoa(JSON.stringify(pr));
+}
+
+/**
+ * Decode PaymentRequired from base64 header
+ */
+export function decodePaymentRequired(encoded: string): PaymentRequired {
+  return JSON.parse(atob(encoded));
+}
+
+/**
+ * Create 402 Payment Required response (official x402 protocol)
  */
 export function create402Response(
   pricing: EndpointPricing,
   config: PaywallConfig,
   nonce: string,
   expiry: number,
-  endpoint: string
+  endpoint: string,
+  request?: Request
 ): Response {
+  const resource = request ? request.url : endpoint;
+  const paymentRequired = createPaymentRequired(pricing, config, nonce, expiry, resource);
+  const encodedPR = encodePaymentRequired(paymentRequired);
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    // Official x402 protocol header
+    'PAYMENT-REQUIRED': encodedPR,
+    // Also include legacy headers for backwards compatibility
     'X-PRICE': pricing.priceToken,
     'X-PRICE-USD': pricing.priceUsd.toString(),
     'X-TOKEN': pricing.token,
     'X-SELLER': config.sellerAddress,
     'X-CHAIN-ID': pricing.chainId.toString(),
+    'X-NETWORK': chainIdToCAIP2(pricing.chainId),
     'X-EXPIRY': expiry.toString(),
     'X-NONCE': nonce,
   };
@@ -105,24 +193,22 @@ export function create402Response(
     headers['X-DESCRIPTION'] = pricing.description;
   }
 
-  if (pricing.schemes) {
-    headers['X-SCHEMES'] = pricing.schemes.join(',');
-  }
-
   const body = JSON.stringify({
     error: 'Payment Required',
     code: 402,
+    paymentRequirements: paymentRequired,
+    // Legacy format for backwards compatibility
     payment: {
       price: pricing.priceToken,
       priceUsd: pricing.priceUsd,
       token: pricing.token,
       seller: config.sellerAddress,
       chainId: pricing.chainId,
+      network: chainIdToCAIP2(pricing.chainId),
       expiry,
       nonce,
       endpoint,
       description: pricing.description,
-      schemes: pricing.schemes,
     },
     message: `This endpoint requires payment of $${pricing.priceUsd.toFixed(4)} USD`,
   });

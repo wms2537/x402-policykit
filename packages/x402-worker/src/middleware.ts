@@ -61,12 +61,13 @@ export function withX402Paywall<Env = unknown>(
     const nonce = generateNonce();
     const expiry = Math.floor(Date.now() / 1000) + (config.expiryDuration ?? 300);
 
-    // Check for payment header
-    const paymentHeader = request.headers.get('X-PAYMENT');
+    // Check for payment header (support both official and legacy headers)
+    const paymentHeader = request.headers.get('PAYMENT-SIGNATURE')
+      || request.headers.get('X-PAYMENT');
 
     if (!paymentHeader) {
-      // No payment - return 402
-      return create402Response(pricing, config, nonce, expiry, endpoint);
+      // No payment - return 402 with official x402 protocol headers
+      return create402Response(pricing, config, nonce, expiry, endpoint, request);
     }
 
     // Parse payment
@@ -163,9 +164,19 @@ export function withX402Paywall<Env = unknown>(
       );
     }
 
-    // Add receipt ID to response
+    // Add receipt ID and payment response to headers
     const headers = new Headers(response.headers);
     headers.set('X-RECEIPT-ID', receiptId);
+
+    // Add official x402 PAYMENT-RESPONSE header
+    const paymentResponse = {
+      success: true,
+      receiptId,
+      network: `eip155:${payment.chainId}`,
+      txHash: payment.txHash,
+      settledAt: new Date().toISOString(),
+    };
+    headers.set('PAYMENT-RESPONSE', btoa(JSON.stringify(paymentResponse)));
 
     return new Response(response.body, {
       status: response.status,
@@ -176,7 +187,7 @@ export function withX402Paywall<Env = unknown>(
 }
 
 /**
- * Create 402 headers object
+ * Create 402 headers object (includes both official and legacy headers)
  */
 function create402Headers(
   pricing: { priceUsd: number; priceToken: string; token: string; chainId: number; description?: string; schemes?: string[] },
@@ -184,12 +195,27 @@ function create402Headers(
   nonce: string,
   expiry: number
 ): Record<string, string> {
+  // Create PaymentRequired object for official header
+  const paymentRequired = {
+    scheme: pricing.schemes?.[0] ?? 'exact',
+    network: `eip155:${pricing.chainId}`,
+    maxAmountRequired: pricing.priceToken,
+    payTo: config.sellerAddress,
+    maxTimeoutSeconds: config.expiryDuration ?? 300,
+    asset: pricing.token,
+    extra: { priceUsd: pricing.priceUsd, nonce, expiry },
+  };
+
   return {
+    // Official x402 protocol header
+    'PAYMENT-REQUIRED': btoa(JSON.stringify(paymentRequired)),
+    // Legacy headers for backwards compatibility
     'X-PRICE': pricing.priceToken,
     'X-PRICE-USD': pricing.priceUsd.toString(),
     'X-TOKEN': pricing.token,
     'X-SELLER': config.sellerAddress,
     'X-CHAIN-ID': pricing.chainId.toString(),
+    'X-NETWORK': `eip155:${pricing.chainId}`,
     'X-EXPIRY': expiry.toString(),
     'X-NONCE': nonce,
     ...(pricing.description && { 'X-DESCRIPTION': pricing.description }),

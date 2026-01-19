@@ -6,14 +6,46 @@
 import type { X402Headers, PaymentProof } from './types';
 
 /**
+ * Parse CAIP-2 network identifier to chain ID
+ */
+function caip2ToChainId(network: string): number {
+  const match = network.match(/^eip155:(\d+)$/);
+  if (!match) return 0;
+  return parseInt(match[1], 10);
+}
+
+/**
  * Parse 402 response headers into X402Headers object
+ * Supports both official x402 protocol (PAYMENT-REQUIRED) and legacy headers
  */
 export function parse402Headers(response: Response): X402Headers | null {
+  // Try official PAYMENT-REQUIRED header first
+  const paymentRequired = response.headers.get('PAYMENT-REQUIRED');
+  if (paymentRequired) {
+    try {
+      const decoded = JSON.parse(atob(paymentRequired));
+      return {
+        price: decoded.maxAmountRequired,
+        priceUsd: decoded.extra?.priceUsd ?? 0,
+        token: decoded.asset,
+        seller: decoded.payTo,
+        chainId: caip2ToChainId(decoded.network),
+        expiry: decoded.extra?.expiry ?? Math.floor(Date.now() / 1000) + (decoded.maxTimeoutSeconds || 300),
+        nonce: decoded.extra?.nonce ?? generateNonce(),
+        description: decoded.description,
+        schemes: decoded.scheme ? [decoded.scheme] : undefined,
+      };
+    } catch {
+      // Fall through to legacy headers
+    }
+  }
+
+  // Fallback to legacy X- headers
   const price = response.headers.get('X-PRICE');
   const priceUsd = response.headers.get('X-PRICE-USD');
   const token = response.headers.get('X-TOKEN');
   const seller = response.headers.get('X-SELLER');
-  const chainId = response.headers.get('X-CHAIN-ID');
+  const chainId = response.headers.get('X-CHAIN-ID') || response.headers.get('X-NETWORK');
   const expiry = response.headers.get('X-EXPIRY');
   const nonce = response.headers.get('X-NONCE');
 
@@ -22,17 +54,32 @@ export function parse402Headers(response: Response): X402Headers | null {
     return null;
   }
 
+  // Parse chainId - support both numeric and CAIP-2 format
+  let parsedChainId: number;
+  if (chainId.startsWith('eip155:')) {
+    parsedChainId = caip2ToChainId(chainId);
+  } else {
+    parsedChainId = parseInt(chainId, 10);
+  }
+
   return {
     price,
     priceUsd: priceUsd ? parseFloat(priceUsd) : 0,
     token,
     seller,
-    chainId: parseInt(chainId, 10),
+    chainId: parsedChainId,
     expiry: parseInt(expiry, 10),
     nonce,
     description: response.headers.get('X-DESCRIPTION') || undefined,
     schemes: response.headers.get('X-SCHEMES')?.split(',').map(s => s.trim()) || undefined,
   };
+}
+
+/**
+ * Generate a random nonce
+ */
+function generateNonce(): string {
+  return `nonce_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
 /**
