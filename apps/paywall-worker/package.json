@@ -1,0 +1,23 @@
+{
+  "name": "@x402/paywall-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "x402 Paid Tools Gateway - Cloudflare Worker with paywall-protected endpoints",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit",
+    "db:init": "wrangler d1 execute x402-db --local --file=../../db/schema.sql",
+    "db:init:remote": "wrangler d1 execute x402-db --file=../../db/schema.sql"
+  },
+  "dependencies": {
+    "@x402/policy-engine": "workspace:*",
+    "@x402/worker": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^4.0.0"
+  }
+}

@@ -10,8 +10,9 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationMap": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true
+    "outDir": "dist",
+    "rootDir": "src"
   },
-  "exclude": ["node_modules", "**/node_modules", "**/dist", "**/.next", "**/.open-next"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
